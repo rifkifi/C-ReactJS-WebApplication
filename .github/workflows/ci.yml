@@ -23,7 +23,7 @@ jobs:
       - name: Export OpenAPI
         run: |
           dotnet tool install --global Swashbuckle.AspNetCore.Cli
-          swagger tofile --output ../openapi/openapi.json ./bin/Release/net9.0/SimpleApi.dll v1
+          swagger tofile --output ../openapi/openapi.json ./bin/Release/net9.0/backend.dll v1
         shell: bash
 
   frontend:
