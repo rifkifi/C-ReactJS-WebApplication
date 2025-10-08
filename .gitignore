@@ -1,0 +1,10 @@
+/openapi/*.yaml
+/openapi/*.yml
+/openapi/*.json
+/backend/bin/
+/backend/obj/
+/backend/.vs/
+/frontend/node_modules/
+/frontend/dist/
+.DS_Store
+Thumbs.db
