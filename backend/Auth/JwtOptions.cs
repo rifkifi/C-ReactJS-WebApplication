@@ -1,4 +1,4 @@
-namespace Backend.Services.Auth;
+namespace Backend.Auth;
 
 public class JwtOptions
 {
