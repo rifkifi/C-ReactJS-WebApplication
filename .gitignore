@@ -15,5 +15,5 @@
 /frontend/.env.production
 /cli/.dockerignore
 /cli/Dockerfile
-.github
+/.github
 .DS_Store
