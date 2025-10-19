@@ -1,73 +1,59 @@
-# React + TypeScript + Vite
+# Frontend (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React frontend for the C-ReactJS-WebApplication project. Uses Vite for dev/build, Tailwind CSS for styling, React Router for routing, and Axios to talk to the backend API.
 
-Currently, two official plugins are available:
+## Tech Stack
+- React 19, React Router 7
+- Vite 7
+- Tailwind CSS 4 (via `@tailwindcss/vite`)
+- Axios, React Hot Toast, React Select
+- ESLint (flat config) for linting
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Prerequisites
+- Node.js 18+ (LTS recommended)
+- npm 9+ (or a compatible package manager)
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Install
+```
+cd frontend
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Development
 ```
+npm run dev
+```
+Vite dev server runs on `http://localhost:5173`.
+
+API requests are made to relative paths (e.g., `/api/...`). During development, the Vite proxy forwards `/api` to the backend at `http://localhost:5198` (see `vite.config.js`). Ensure the backend is running there.
+
+## Build & Preview
+```
+npm run build
+npm run preview
+```
+Build outputs to `dist/`. `npm run preview` serves the built assets locally for verification.
+
+## Scripts
+- `npm run dev` — start dev server with HMR
+- `npm run build` — production build
+- `npm run preview` — preview built app
+- `npm run lint` — run ESLint
+
+## Configuration
+- Dev proxy: `vite.config.js` proxies `/api` to `http://localhost:5198` and enables HMR.
+- Styling: Tailwind CSS v4 is configured via the Vite plugin `@tailwindcss/vite`.
+
+
+## Project Structure
+- `src/` — application source
+  - `components/` — UI components (cards, forms, header, etc.)
+  - `pages/` — route-level pages (Home, Login, Register, Profile, Restaurant, Management)
+  - `provider/` — context providers (AuthProvider, CartProvider)
+  - `App.jsx` — routes and layout
+  - `main.jsx` — app bootstrap
+
+## Auth & API
+- Auth is handled via `AuthProvider` using Axios; on login, the received `access_token` is stored in `localStorage` and attached to requests as `Authorization: Bearer <token>`.
+- Protected routes on the backend require sending the token; the dev proxy ensures calls to `/api/...` hit the backend server.
+
