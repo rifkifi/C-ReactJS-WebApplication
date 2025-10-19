@@ -23,7 +23,7 @@ public class UsersController : ControllerBase
 
     [HttpGet]
     [Authorize(Roles = "admin")]
-    [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<UserResponse>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUsers(int page = 1, int pageSize = 20)
     {
         page = page < 1 ? 1 : page;
@@ -43,20 +43,19 @@ public class UsersController : ControllerBase
                 x.CreatedAt
             ))
             .ToListAsync();
-        return Ok(new { total, items });
+        return Ok(new ApiResponse<IEnumerable<UserResponse>>(items, true, "Users retrieved successfully"));
     }
 
-    [HttpGet("{id:guid}")]
+    [HttpGet("data")]
     [Authorize]
-    [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetUser(Guid id)
+    [ProducesResponseType(typeof(ApiResponse<UserResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetUser()
     {
         var sub = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(sub, out var Id)) return Forbid();
-        if (id != Id) return Forbid();
 
         var item = await _db.Users.AsNoTracking()
-            .Where(x => x.Id == id)
+            .Where(x => x.Id == Id)
             .Select(x => new UserResponse(
                 x.Id,
                 x.Username,
@@ -67,6 +66,26 @@ public class UsersController : ControllerBase
             ))
             .FirstOrDefaultAsync();
         if (item is null) return NotFound();
-        return Ok(item);
+        return Ok(new ApiResponse<UserResponse>(item, true, "User retrieved successfully"));
+    }
+
+    [HttpPut("{id:guid}")]
+    [Authorize]
+    [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UserUpdateRequest request)
+    {
+        var sub = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(sub, out var ownerId)) return Forbid();
+        if (id != ownerId) return Forbid();
+        
+        var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == id);
+        if (user is null) return NotFound();
+
+        user.Username = request.Username ?? user.Username;
+        user.Name = request.Name ?? user.Name;
+        user.Address = request.Address ?? user.Address;
+        user.PhoneNumber = request.PhoneNumber ?? user.PhoneNumber;
+        await _db.SaveChangesAsync();
+        return NoContent();
     }
 }

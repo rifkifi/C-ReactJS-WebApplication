@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+  pg:
+    image: postgres:16
+    container_name: pg
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: "#Philomath27"     
+      POSTGRES_DB: restaurant_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d restaurant_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    image: backend:dev                    
+    container_name: backend
+    depends_on:
+      pg:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://0.0.0.0:5198" 
+      Jwt__Issuer: "Backend"
+      Jwt__Audience: "Frontend"
+      Jwt__Key: "SpqC3mez7Ca5RylrM32Ltp71ZxXf1ePf"
+      ConnectionStrings__DefaultConnection: "Host=pg;Port=5432;Database=restaurant_db;Username=root;Password=#Philomath27;Include Error Detail=true"
+    ports:
+      - "5198:5198"
+
+  cli:
+    image: cli-client:1
+    container_name: cli-client
+    depends_on:
+      backend:
+        condition: service_started
+    entrypoint: ["/app/cli"]
+    tty: true
+
+  frontend:
+    image: frontend:dev
+    container_name: frontend
+    depends_on:
+      - backend
+    ports:
+      - "3001:80"
+
+volumes:
+  pgdata:
+    external: true
+    name: pgdata
+
+networks:
+  default:
+    driver: bridge

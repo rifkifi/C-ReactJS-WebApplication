@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Controllers;
 [ApiController]
-[Route("auth")]
+[Route("api/[controller]")]
 public sealed class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
@@ -50,12 +50,12 @@ public sealed class AuthController : ControllerBase
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
 
-        return Created($"/auth/{user.Id}", new { id = user.Id });
+        return Created($"/users/data", new { id = user.Id });
     }
 
     [HttpPost("login")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
@@ -66,6 +66,6 @@ public sealed class AuthController : ControllerBase
         if (!ok) return Unauthorized();
 
         var accessToken = _tokens.Create(user);
-        return Ok(new { access_token = accessToken, token_type = "Bearer" });
+        return Ok(new ApiResponse<object>(new { id = user.Id, access_token = accessToken, token_type = "Bearer" }, true, "User logged in successfully"));
     }
 }

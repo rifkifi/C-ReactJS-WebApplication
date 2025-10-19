@@ -22,7 +22,7 @@ public sealed class RestaurantsController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(IEnumerable<RestaurantResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<RestaurantResponse>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRestaurants(int page = 1, int pageSize = 20)
     {
         page = page < 1 ? 1 : page;
@@ -38,6 +38,7 @@ public sealed class RestaurantsController : ControllerBase
                 x.Name,
                 x.Address,
                 x.RestaurantTypeId,
+                x.Type,
                 x.Phone,
                 x.OpeningHours,
                 x.ImageUrl,
@@ -49,19 +50,23 @@ public sealed class RestaurantsController : ControllerBase
                 ))
             .ToListAsync();
 
-        return Ok(items);
+        return Ok(new ApiResponse<IEnumerable<RestaurantResponse>>(items, true, "Restaurants retrieved successfully"));
     }
 
     [HttpGet("{id:guid}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<RestaurantResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRestaurant(Guid id)
     {
         var item = await _db.Restaurants
             .AsNoTracking()
+            .Where(x => x.Id == id)
             .Select(x => new RestaurantResponse(
                 x.Id,
                 x.Name,
                 x.Address,
                 x.RestaurantTypeId,
+                x.Type,
                 x.Phone,
                 x.OpeningHours,
                 x.ImageUrl,
@@ -71,13 +76,80 @@ public sealed class RestaurantsController : ControllerBase
                 x.RatingCount,
                 x.CreatedAt
                 ))
-            .FirstOrDefaultAsync(x => x.Id == id);
+            .SingleOrDefaultAsync();
+
+        if (item is null)
+            return NotFound();
+        return Ok(new ApiResponse<RestaurantResponse>(item, true, "Restaurants retrieved successfully"));
+    }
+
+    [HttpGet("owner/{id:guid}")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<RestaurantResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRestaurantByOwner(Guid id)
+    {
+        var sub = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(sub, out var ownerId)) return Forbid();
+        if (id != ownerId) return Forbid();
+
+        var item = await _db.Restaurants
+            .AsNoTracking()
+            .Where(x => x.OwnerId == id)
+            .Select(x => new RestaurantResponse(
+                x.Id,
+                x.Name,
+                x.Address,
+                x.RestaurantTypeId,
+                x.Type,
+                x.Phone,
+                x.OpeningHours,
+                x.ImageUrl,
+                x.Description,
+                x.IsActive,
+                x.Rating,
+                x.RatingCount,
+                x.CreatedAt
+                ))
+            .SingleOrDefaultAsync();
         if (item is null) return NotFound();
-        return Ok(item);
+        return Ok(new ApiResponse<RestaurantResponse>(item, true, "Restaurants retrieved successfully"));
+    }
+
+    [HttpGet("type/{id:guid}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<RestaurantResponse>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRestaurantsByType(Guid id, int page = 1, int pageSize = 20)
+    {
+        page = page < 1 ? 1 : page;
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var query = _db.Restaurants.AsNoTracking().Where(x => x.RestaurantTypeId == id);
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new RestaurantResponse(
+                x.Id,
+                x.Name,
+                x.Address,
+                x.RestaurantTypeId,
+                x.Type,
+                x.Phone,
+                x.OpeningHours,
+                x.ImageUrl,
+                x.Description,
+                x.IsActive,
+                x.Rating,
+                x.RatingCount,
+                x.CreatedAt
+                ))
+            .ToListAsync();
+
+        return Ok(new ApiResponse<IEnumerable<RestaurantResponse>>(items, true, "Restaurants retrieved successfully"));
     }
 
     [HttpPost("create")]
-    [Authorize] // require login
+    [Authorize]
     [ProducesResponseType(typeof(RestaurantResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -85,7 +157,7 @@ public sealed class RestaurantsController : ControllerBase
     {
         Console.WriteLine(req);
         if (string.IsNullOrWhiteSpace(req.Name) || string.IsNullOrWhiteSpace(req.Address))
-            return BadRequest(new { error = "Name and address are required" });
+            return BadRequest(new { success = false, message = "Name and address are required" });
 
         var typeExists = await _db.RestaurantTypes.AnyAsync(x => x.Id == req.RestaurantTypeId);
         if (!typeExists) return BadRequest(new { error = "Invalid restaurant type" });
@@ -116,6 +188,7 @@ public sealed class RestaurantsController : ControllerBase
             entity.Name,
             entity.Address,
             entity.RestaurantTypeId,
+            entity.Type,
             entity.Phone,
             entity.OpeningHours,
             entity.ImageUrl,
@@ -126,7 +199,7 @@ public sealed class RestaurantsController : ControllerBase
             entity.CreatedAt
             );
 
-        return CreatedAtAction(nameof(GetRestaurant), new { id = entity.Id }, res);
+        return CreatedAtAction(nameof(GetRestaurant), new { id = entity.Id }, new ApiResponse<RestaurantResponse>(res, true, "Restaurant created successfully"));
     }
 
     [HttpPut("{id:guid}")]
@@ -136,11 +209,12 @@ public sealed class RestaurantsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateRestaurant(Guid id, [FromBody] UpdateRestaurantRequest req)
     {
-        if (string.IsNullOrWhiteSpace(req.Name) || string.IsNullOrWhiteSpace(req.Address))
-            return BadRequest(new { error = "Name and address are required" });
-
         var entity = await _db.Restaurants.FirstOrDefaultAsync(x => x.Id == id);
         if (entity is null) return NotFound();
+
+        var sub = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(sub, out var ownerId)) return Forbid();
+        if (entity.OwnerId != ownerId) return Forbid();
 
         entity.Name = req.Name.Trim();
         entity.Address = req.Address.Trim();
@@ -154,7 +228,7 @@ public sealed class RestaurantsController : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete("{id:guid}")] // TODO :: only owner can delete
+    [HttpDelete("{id:guid}")]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -162,6 +236,14 @@ public sealed class RestaurantsController : ControllerBase
     {
         var entity = await _db.Restaurants.FirstOrDefaultAsync(x => x.Id == id);
         if (entity is null) return NotFound();
+
+        if (!User.IsInRole("admin"))
+        {
+            var sub = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(sub, out var ownerId)) return Forbid();
+            if (entity.OwnerId != ownerId) return Forbid();
+        }
+
         _db.Restaurants.Remove(entity);
         await _db.SaveChangesAsync();
         return NoContent();

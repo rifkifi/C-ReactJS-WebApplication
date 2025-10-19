@@ -105,8 +105,8 @@ public class RestaurantTypesController : ControllerBase
         return NoContent();
     }
     
-    [HttpDelete("{id:guid}")] // TODO :: only owner can delete
-    [Authorize]
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteRestaurantType(Guid id)

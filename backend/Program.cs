@@ -15,8 +15,9 @@ using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddControllers();
+
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Backend API", Version = "v1" });
@@ -30,11 +31,14 @@ builder.Services.AddSwaggerGen(c =>
         Description = "Enter: Bearer {JWT}"
     };
     c.AddSecurityDefinition("Bearer", scheme);
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement { [scheme] = Array.Empty<string>() });
 });
 
-var connStr = builder.Configuration.GetConnectionString("Default")
-              ?? throw new Exception("Missing ConnectionStrings:Default");
+// var connStr = builder.Configuration.GetConnectionString("Default")
+//               ?? throw new Exception("Missing ConnectionStrings:Default"); // dev-only
+
+var connStr = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+         ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseNpgsql(connStr));
 
@@ -51,8 +55,8 @@ builder.Services.AddCors(o =>
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 
-using var tmpProvider = builder.Services.BuildServiceProvider();
-var jwt = tmpProvider.GetRequiredService<IOptions<JwtOptions>>().Value;
+var jwt = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()
+          ?? throw new Exception("Missing Jwt configuration section");
 
 var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key));
 builder.Services.AddAuthentication("Bearer")

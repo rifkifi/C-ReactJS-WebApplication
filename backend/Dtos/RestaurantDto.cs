@@ -29,6 +29,7 @@ public sealed record RestaurantResponse(
     string Name,
     string Address,
     Guid? RestaurantTypeId,
+    RestaurantType? Type,
     string? Phone,
     string? OpeningHours,
     string? ImageUrl,

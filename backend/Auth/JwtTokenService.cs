@@ -25,7 +25,7 @@ public class JwtTokenService(IOptions<JwtOptions> options) : IJwtTokenService
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.UniqueName, user.Username),
-            new(ClaimTypes.Name, user.Name),
+            new(ClaimTypes.Name, user.Name ?? user.Username),
         };
         foreach (var role in user.Roles) claims.Add(new Claim(ClaimTypes.Role, role));
 
@@ -37,8 +37,6 @@ public class JwtTokenService(IOptions<JwtOptions> options) : IJwtTokenService
             expires: DateTime.UtcNow.AddMinutes(_opt.AccessTokenMinutes),
             signingCredentials: creds
         );
-
-        Console.WriteLine($"Token Expired: {token.ValidTo}");
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }

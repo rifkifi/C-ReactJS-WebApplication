@@ -21,7 +21,7 @@ public class MenusController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(IEnumerable<MenuResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<MenuResponse>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMenus(int page = 1, int pageSize = 20)
     {
         page = page < 1 ? 1 : page;
@@ -46,12 +46,12 @@ public class MenusController : ControllerBase
                 x.RatingCount
             ))
             .ToListAsync();
-        return Ok(new { total, items });
+        return Ok(new ApiResponse<IEnumerable<MenuResponse>>(items, true, "Menus retrieved successfully"));
     }
 
     [HttpGet("{id:guid}")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(MenuResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<MenuResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMenu(Guid id)
     {
         var item = await _db.Menus.AsNoTracking()
@@ -70,15 +70,15 @@ public class MenusController : ControllerBase
                 x.RatingCount
             )).SingleOrDefaultAsync();
         if (item is null) return NotFound();
-        return Ok(item);
+        return Ok(new ApiResponse<MenuResponse>(item, true, "Menu retrieved successfully"));
     }
 
     [HttpGet("restaurant/{restaurantId:guid}")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(MenuResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<MenuResponse>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMenuByRestaurant(Guid restaurantId)
     {
-        var item = await _db.Menus.AsNoTracking()
+        var items = await _db.Menus.AsNoTracking()
             .Where(x => x.RestaurantId == restaurantId)
             .Select(x => new MenuResponse(
                 x.Id,
@@ -94,21 +94,21 @@ public class MenusController : ControllerBase
                 x.RatingCount
             ))
             .ToListAsync();
-        if (item is null) return NotFound();
-        return Ok(item);
+        if (items is null) return NotFound();
+        return Ok(new ApiResponse<IEnumerable<MenuResponse>>(items, true, "Menus retrieved successfully"));
     }
 
 
     [HttpPost("create")]
     [Authorize]
-    [ProducesResponseType(typeof(MenuResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponse<MenuResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateMenu([FromBody] CreateMenuRequest req)
     {
         if (string.IsNullOrWhiteSpace(req.Name) || req.Price < 0 || req.RestaurantId == Guid.Empty || req.CategoryId == Guid.Empty)
-            return BadRequest(new { error = "Name, Description, Price, RestaurantId and CategoryId are required" });
+            return BadRequest(new { success = false, message = "Name, Description, Price, RestaurantId and CategoryId are required" });
         var restaurant = await _db.Restaurants.FirstOrDefaultAsync(x => x.Id == req.RestaurantId);
-        if (restaurant is null) return BadRequest(new { error = "Invalid RestaurantId" });
+        if (restaurant is null) return BadRequest(new { success = false, message = "Invalid RestaurantId" });
 
         var sub = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(sub, out var ownerId)) return Forbid();
@@ -121,6 +121,7 @@ public class MenusController : ControllerBase
             Description = req.Description ?? "",
             Price = req.Price,
             RestaurantId = req.RestaurantId,
+            ImageUrl = req.ImageUrl,
             CategoryId = req.CategoryId,
             CreatedAt = DateTime.UtcNow
         };
@@ -128,7 +129,7 @@ public class MenusController : ControllerBase
         _db.Menus.Add(entity);
         await _db.SaveChangesAsync();
         var res = new MenuResponse(entity.Id, entity.Name, entity.Description, entity.Price, entity.RestaurantId, entity.CategoryId, 0, entity.ImageUrl, entity.CreatedAt, entity.IsActive, 0);
-        return CreatedAtAction(nameof(GetMenu), new { id = entity.Id }, res);
+        return CreatedAtAction(nameof(GetMenu), new { id = entity.Id }, new ApiResponse<MenuResponse>(res, true, "Menu created successfully"));
     }
 
     [HttpPut("{id:guid}")]
@@ -148,13 +149,14 @@ public class MenusController : ControllerBase
         entity.Price = req.Price;
         entity.RestaurantId = req.RestaurantId;
         entity.CategoryId = req.CategoryId;
+        entity.ImageUrl = req.ImageUrl;
         entity.IsActive = req.IsActive;
         await _db.SaveChangesAsync();
 
         return NoContent();
     }
-    
-    [HttpDelete("{id:guid}")] // TODO :: only owner can delete
+
+    [HttpDelete("{id:guid}")]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -162,9 +164,18 @@ public class MenusController : ControllerBase
     {
         var entity = await _db.Menus.FirstOrDefaultAsync(x => x.Id == id);
         if (entity is null) return NotFound();
+
+        if (!User.IsInRole("admin"))
+        {
+            var sub = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(sub, out var ownerId)) return Forbid();
+            var restaurant = await _db.Restaurants.FirstOrDefaultAsync(x => x.Id == entity.RestaurantId);
+            if (restaurant?.OwnerId != ownerId) return Forbid();
+        }
+
         _db.Menus.Remove(entity);
         await _db.SaveChangesAsync();
-        
+
         return NoContent();
     }
 }

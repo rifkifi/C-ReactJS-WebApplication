@@ -21,7 +21,7 @@ public class MenuCategoriesController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(IEnumerable<MenuCategoryResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<MenuCategoryResponse>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMenuCategories()
     {
         var query = _db.MenuCategories.AsNoTracking();
@@ -34,12 +34,12 @@ public class MenuCategoriesController : ControllerBase
                 x.CreatedAt
             ))
             .ToListAsync();
-        return Ok(items);
+        return Ok(new ApiResponse<IEnumerable<MenuCategoryResponse>>(items, true, "Menu categories retrieved successfully"));
     }
 
     [HttpGet("{id:guid}")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(MenuCategoryResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<MenuCategoryResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMenuCategory(Guid id)
     {
         Console.WriteLine(id);
@@ -52,16 +52,16 @@ public class MenuCategoriesController : ControllerBase
                 x.CreatedAt
             )).SingleOrDefaultAsync();
         if (item is null) return NotFound();
-        return Ok(item);
+        return Ok(new ApiResponse<MenuCategoryResponse>(item, true, "Menu category retrieved successfully"));
     }
 
     [HttpPost("create")]
     [Authorize(Roles = "admin")]
-    [ProducesResponseType(typeof(MenuCategoryResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<MenuCategoryResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateMenuCategory([FromBody] CreateMenuCategoryRequest req)
     {
-        if (string.IsNullOrWhiteSpace(req.Name)) return BadRequest(new { error = "Name is required" });
+        if (string.IsNullOrWhiteSpace(req.Name) || string.IsNullOrWhiteSpace(req.Description)) return BadRequest(new { success = false, message = "Some data are missing" });
 
         var entity = new MenuCategory
         {
@@ -73,7 +73,7 @@ public class MenuCategoriesController : ControllerBase
         await _db.MenuCategories.AddAsync(entity);
         await _db.SaveChangesAsync();
         var res = new MenuCategoryResponse(entity.Id, entity.Name, entity.Description, entity.CreatedAt);
-        return CreatedAtAction(nameof(GetMenuCategory), new { id = entity.Id }, res);
+        return CreatedAtAction(nameof(GetMenuCategory), new { id = entity.Id }, new ApiResponse<MenuCategoryResponse>(res, true, "Menu category created successfully"));
     }
 
     [HttpPut("{id:guid}")]
@@ -82,8 +82,6 @@ public class MenuCategoriesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateMenuCategory(Guid id, [FromBody] UpdateMenuCategoryRequest req)
     {
-        if (string.IsNullOrWhiteSpace(req.Name)) return BadRequest(new { error = "Name is required" });
-
         var entity = await _db.MenuCategories.FirstOrDefaultAsync(x => x.Id == id);
         if (entity is null) return NotFound();
 

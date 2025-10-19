@@ -7,5 +7,11 @@ public sealed record UserResponse(
     string? Address,
     string? PhoneNumber,
     DateTime CreatedAt
+);
 
+public sealed record UserUpdateRequest(
+    string? Username,
+    string? Name,
+    string? Address,
+    string? PhoneNumber
 );

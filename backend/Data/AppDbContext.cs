@@ -16,7 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         b.Entity<User>(e =>
         {
             e.HasKey(x => x.Id);
-            e.HasIndex(x => x.Username).IsUnique();           // unique usernames
+            e.HasIndex(x => x.Username).IsUnique();
             e.Property(x => x.Username).HasMaxLength(100).IsRequired();
             e.Property(x => x.PasswordHash).HasMaxLength(200).IsRequired();
             e.Property(x => x.Name).HasMaxLength(100);

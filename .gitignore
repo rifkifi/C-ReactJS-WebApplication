@@ -4,7 +4,15 @@
 /backend/bin/
 /backend/obj/
 /backend/.vs/
+/backend/Dockerfile
+/backend/.dockerignore
 /frontend/node_modules/
 /frontend/dist/
+/frontend/nginx.conf
+/frontend/Dockerfile
+/frontend/.dockerignore
+/frontend/.env.development
+/frontend/.env.production
+/cli/.dockerignore
+/cli/Dockerfile
 .DS_Store
-Thumbs.db
