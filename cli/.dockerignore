@@ -1,0 +1,13 @@
+# Ignore VCS and editor files
+.git
+.gitignore
+.DS_Store
+*.swp
+*.log
+*.tmp
+
+# Node artifacts (not relevant but safe)
+node_modules
+dist
+build
+

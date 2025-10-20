@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/*.user
+**/*.suo
+*.Secrets/*
+*.csproj.user
+*.pfx
+node_modules/
+.env
