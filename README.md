@@ -54,14 +54,14 @@ Compose will:
 docker compose run --rm cli -X METHOD -url URL [-auth TOKEN] [-d 'JSON' | -data-file /app/file.json] [-H-Content-Type TYPE] [-t 10s] [-k]
 ```
 
--X: HTTP method (GET, POST, PUT, PATCH, DELETE). Default GET.
--url: Full URL (inside Compose use http://backend:5198/...).
--auth: Bearer token (sends Authorization: Bearer <token>).
--d: Inline JSON body (e.g., '{"Name":"foo"}').
--data-file: Path to JSON body file (inside container).
--H-Content-Type: Content-Type header (default application/json).
--t: Request timeout (e.g., 5s, 30s). Default 10s.
--k: Allow insecure TLS (only for https with self-signed).
+- X: HTTP method (GET, POST, PUT, PATCH, DELETE). Default GET.
+- url: Full URL (inside Compose use http://backend:5198/...).
+- auth: Bearer token (sends Authorization: Bearer <token>).
+- d: Inline JSON body (e.g., '{"Name":"foo"}').
+- data-file: Path to JSON body file (inside container).
+- H-Content-Type: Content-Type header (default application/json).
+- t: Request timeout (e.g., 5s, 30s). Default 10s.
+- k: Allow insecure TLS (only for https with self-signed).
 
 ## 5) Default Data
 On first start the backend applies migrations and inserts:
